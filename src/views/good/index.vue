@@ -36,7 +36,7 @@
               label="起售"
               icon="arrow_circle_up"
             />
-         
+
             <q-btn
               class="q-ml-md"
               @click="
@@ -45,7 +45,7 @@
                 }
               "
               :disabled="props.row.images.length == 0"
-              label="打卡图片"
+              label="商品图片"
               glossy
               color="pink"
             ></q-btn>

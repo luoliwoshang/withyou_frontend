@@ -25,8 +25,9 @@
           <template v-if="props.col.name == 'operate'">
             <q-btn
               @click="() => set_sale_status(props, 'take_down')"
-              v-if="props.row.status == 0"
-              label="确认收货"
+              :disabled="props.row.status == 1"
+              :label="props.row.status == 0 ? '去收货' : '已收货'"
+              push
               icon="arrow_circle_down"
             />
             <!--
@@ -78,7 +79,7 @@
 </template>
 
 <script setup>
-import moment from 'moment';
+import moment from "moment";
 import Purchased from "../../apis/purchased.js";
 import pageMix from "../../utils/page.js";
 import { onMounted, reactive, ref } from "vue";
@@ -162,7 +163,7 @@ const columns = [
     required: true,
     label: "购入时间",
     align: "center",
-    field: (row) =>moment(row.timestamp).format("yyyy年M月DD日 HH:mm:ss ") ,
+    field: (row) => moment(row.timestamp).format("yyyy年M月DD日 HH:mm:ss "),
   },
   {
     name: "operate",

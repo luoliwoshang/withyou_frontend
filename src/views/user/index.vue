@@ -59,6 +59,11 @@
               label="打卡"
               @click="() => handleCreateClockin(props)"
             />
+            <q-btn
+              class="q-ml-md"
+              label="创建商品"
+              @click="() => handleCreateGood(props)"
+            />
           </template>
           <template v-else-if="props.col.name == 'avatar'">
             <q-avatar>
@@ -73,45 +78,111 @@
     </ZTable>
 
     <q-dialog v-model="create_clockin_show" persistent>
-      <q-card style="min-width: 350px">
+      <q-card>
         <q-card-section>
           <div class="text-h6">创建打卡</div>
         </q-card-section>
-
         <q-card-section class="q-pt-none">
-          <q-input
-            label="挑战"
-            dense
-            readonly
-            v-model="create_clockin_form.challenge_name"
+          <q-form
+            ref="ClockinForm"
+            @submit="onClockinSubmit"
+            class="q-gutter-xs"
           >
-            <template v-slot:append>
-              <q-icon
-                name="gps_not_fixed"
-                class="cursor-pointer"
-                @click="choose_challenge_show = true"
+            <q-input
+              label="挑战"
+              filled
+              readonly
+              v-model="create_clockin_form.challenge_name"
+              :rules="[form_not_null]"
+            >
+              <template v-slot:append>
+                <q-icon
+                  name="gps_not_fixed"
+                  class="cursor-pointer"
+                  @click="choose_challenge_show = true"
+                />
+              </template>
+            </q-input>
+            <q-input
+              filled
+              label="打卡心得/内容"
+              :rules="[form_not_null]"
+              v-model="create_clockin_form.content"
+            />
+            <q-uploader
+              :factory="() => uploadFactory('comment/clockin')"
+              @uploaded="handlerAddClockinUploadList"
+              @removed="handlerRemoveClockinUploadList"
+              auto-upload
+              hide-upload-btn
+            />
+            <div class="q-mt-md">
+              <q-btn label="打卡" type="submit" color="primary" />
+              <q-btn
+                label="取消"
+                color="primary"
+                flat
+                class="q-ml-sm"
+                v-close-popup
               />
-            </template>
-          </q-input>
-          <q-input
-            dense
-            label="打卡心得/内容"
-            :rules="[(val) => !!val || '必填']"
-            v-model="create_clockin_form.content"
-          />
-          <q-uploader
-            :factory="uploadFactory"
-            @uploaded="handlerAddUploadList"
-            @removed="handlerRemoveUploadList"
-            auto-upload
-            hide-upload-btn
-          />
+            </div>
+          </q-form>
         </q-card-section>
-
-        <q-card-actions align="right" class="text-primary">
-          <q-btn flat label="取消" v-close-popup />
-          <q-btn flat label="创建" @click="CreateClockin" />
-        </q-card-actions>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="create_good_show">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">创建商品</div>
+        </q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-form ref="GoodForm" @submit="onGoodSubmit" class="q-gutter-xs">
+            <q-input
+              filled
+              v-model="create_good_form.title"
+              label="商品标题"
+              :rules="[form_not_null]"
+            />
+            <q-input
+              filled
+              v-model="create_good_form.desc"
+              label="商品描述"
+              lazy-rules
+              :rules="[form_not_null]"
+            />
+            <q-input
+              type="number"
+              filled
+              v-model="create_good_form.total_count"
+              label="总量"
+              :rules="[form_not_null, over_zero]"
+            />
+            <q-input
+              type="number"
+              filled
+              v-model="create_good_form.price"
+              label="价格"
+              :rules="[form_not_null, over_zero]"
+            />
+            <q-uploader
+              :factory="() => uploadFactory('good')"
+              @uploaded="handlerAddGoodUploadList"
+              @removed="handlerRemoveGoodUploadList"
+              auto-upload
+              hide-upload-btn
+            />
+            <div>
+              <q-btn label="添加" type="submit" color="primary" />
+              <q-btn
+                label="取消"
+                color="primary"
+                flat
+                class="q-ml-sm"
+                v-close-popup
+              />
+            </div>
+          </q-form>
+        </q-card-section>
       </q-card>
     </q-dialog>
     <q-dialog v-model="choose_challenge_show">
@@ -127,15 +198,20 @@
 <script setup>
 import ChallengeView from "../../views/challenge";
 import User from "../../apis/user.js";
+import Good from "../../apis/good.js";
 import Common from "../../apis/common.js";
 import Clockin from "../../apis/clockin.js";
 import pageMix from "../../utils/page.js";
 import { onMounted, reactive, ref, inject } from "vue";
+import { useQuasar } from "quasar";
 import { useRouter } from "vue-router";
+const $q = useQuasar();
 const router = useRouter();
 const global = inject("$global");
-const create_clockin_show = ref(false);
-const choose_challenge_show = ref(false);
+
+const form_not_null = (val) => (val && val.length > 0) || "该数值不能为空";
+const over_zero = (val) => val > 0 || "该数值必须大于0";
+
 const create_clockin_form = ref({
   user_id: "",
   challenge_name: "",
@@ -143,30 +219,30 @@ const create_clockin_form = ref({
   title: "",
   content: "",
 });
-const clockin_images = ref([]);
 
-const uploadFactory = () => {
+//上传图片构造函数
+const uploadFactory = (path) => {
   return {
-    url: "/api/comment/clockin/upload",
+    url: `/api/${path}/upload`,
     headers: [{ name: "token", value: localStorage.getItem("token") }],
     fieldName: "file",
     multiple: false,
   };
 };
-//完成上传添加到数组
-const handlerAddUploadList = ({ files, xhr }) => {
+// 添加图片
+const AddUploadList = (files, xhr, img_map) => {
   const filename = files[0].name;
   const image_loc = JSON.parse(xhr.responseText).data;
-  clockin_images.value.push({ server_file: image_loc, local_name: filename });
+  img_map.value.push({ server_file: image_loc, local_name: filename });
 };
-// 从打卡列表图片中删除
-const handlerRemoveUploadList = (files) => {
+// 删除指定图片
+const RemoveUploadList = (files, img_map) => {
   let filename;
-  clockin_images.value.forEach((item, index) => {
+  img_map.value.forEach((item, index) => {
     if (item.local_name == files[0].name) {
       // 在此处删除并且更新响应式数组
       filename = item.server_file;
-      clockin_images.value.splice(index, 1);
+      img_map.value.splice(index, 1);
     }
   });
   Common.delete_image({
@@ -176,13 +252,23 @@ const handlerRemoveUploadList = (files) => {
   });
 };
 
-//开始创建打卡
+/** 打卡挑战 **/
+// 添加图片
+const handlerAddClockinUploadList = ({ files, xhr }) => {
+  AddUploadList(files, xhr, clockin_images);
+};
+// 从打卡列表图片中删除
+const handlerRemoveClockinUploadList = (files) => {
+  RemoveUploadList(files, clockin_images);
+};
+const choose_challenge_show = ref(false);
+const create_clockin_show = ref(false);
+const ClockinForm = ref(null);
+const clockin_images = ref([]);
 const handleCreateClockin = (data) => {
-  console.log(data.row.id);
   create_clockin_form.value.user_id = data.row.id;
   create_clockin_show.value = true;
 };
-// 选择对应的挑战
 const handleChooseChallenge = (data) => {
   const { title, id } = data.row;
   console.log(title, id);
@@ -190,24 +276,91 @@ const handleChooseChallenge = (data) => {
   create_clockin_form.value.challenge_id = id;
   choose_challenge_show.value = false;
 };
-const CreateClockin = async () => {
-  console.log(create_clockin_form.value);
-  const {
-    user_id,
-    content,
-    challenge_id: target_id,
-  } = create_clockin_form.value;
-  try {
-    const result = await Clockin.create({
-      user_id,
-      target_id,
-      content,
-      images: clockin_images.value.map((item) => item.server_file),
-    });
-  } catch (err) {
-    console.log(err);
-  }
+
+const onClockinSubmit = async () => {
+  ClockinForm.value.validate().then(async (success) => {
+    console.log(clockin_images.value);
+    if (clockin_images.value.length == 0) {
+      $q.notify("打卡图片起码有一张");
+    } else {
+      if (success) {
+        const {
+          user_id,
+          content,
+          challenge_id: target_id,
+        } = create_clockin_form.value;
+        try {
+          const result = await Clockin.create({
+            user_id,
+            target_id,
+            content,
+            images: clockin_images.value.map((item) => item.server_file),
+          }).then((res) => {
+            create_clockin_show.value = false;
+            this.handleRequest();
+          });
+        } catch (err) {
+          console.log(err);
+        }
+      }
+    }
+  });
 };
+/** 打卡挑战 **/
+
+/** 创建商品 **/
+const create_good_show = ref(false);
+const GoodForm = ref(null);
+const create_good_form = ref({
+  owner_id: "",
+  total_count: 0,
+  images: [],
+  title: "",
+  desc: "",
+  price: 0,
+});
+
+const good_images = ref([]);
+const handlerAddGoodUploadList = ({ files, xhr }) => {
+  AddUploadList(files, xhr, good_images);
+};
+const handlerRemoveGoodUploadList = (files) => {
+  RemoveUploadList(files, good_images);
+};
+const handleCreateGood = (data) => {
+  create_good_form.value.owner_id = data.row.id;
+  create_good_show.value = true;
+};
+const onGoodSubmit = async () => {
+  GoodForm.value.validate().then(async (success) => {
+    if (good_images.value.length == 0) {
+      $q.notify("打卡图片起码有一张");
+    } else {
+      if (success) {
+        const { owner_id, title, desc, total_count, price } =
+          create_good_form.value;
+        try {
+          const result = await Good.create({
+            owner_id,
+            title,
+            desc,
+            total_count,
+            price,
+            images: good_images.value.map((item) => item.server_file),
+          }).then((res) => {
+            create_good_show.value = false;
+            this.handleRequest();
+          });
+        } catch (err) {
+          console.log(err);
+        }
+      }
+    }
+  });
+};
+
+/** 创建商品 **/
+
 const show = (data) => {
   console.log(data);
 };
