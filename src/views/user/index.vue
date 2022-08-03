@@ -202,6 +202,7 @@ import Good from "../../apis/good.js";
 import Common from "../../apis/common.js";
 import Clockin from "../../apis/clockin.js";
 import pageMix from "../../utils/page.js";
+import { reset_obj } from "@/utils/tool.js";
 import { onMounted, reactive, ref, inject } from "vue";
 import { useQuasar } from "quasar";
 import { useRouter } from "vue-router";
@@ -301,6 +302,10 @@ const onClockinSubmit = async () => {
           });
         } catch (err) {
           console.log(err);
+        } finally {
+          reset_obj(create_clockin_form.value, default_good_form);
+          clockin_images.value.length = 0;
+          clockin_images.value = [];
         }
       }
     }
@@ -311,14 +316,15 @@ const onClockinSubmit = async () => {
 /** 创建商品 **/
 const create_good_show = ref(false);
 const GoodForm = ref(null);
-const create_good_form = ref({
+const default_good_form = {
   owner_id: "",
   total_count: 0,
   images: [],
   title: "",
   desc: "",
   price: 0,
-});
+};
+const create_good_form = ref({ ...default_good_form });
 
 const good_images = ref([]);
 const handlerAddGoodUploadList = ({ files, xhr }) => {
@@ -353,6 +359,10 @@ const onGoodSubmit = async () => {
           });
         } catch (err) {
           console.log(err);
+        } finally {
+          reset_obj(create_good_form.value, default_good_form);
+          good_images.value.length = 0;
+          good_images.value = [];
         }
       }
     }

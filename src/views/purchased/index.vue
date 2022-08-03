@@ -138,7 +138,7 @@ const columns = [
     field: (row) => row.good_info.title,
   },
   {
-    name: "desc",
+    name: "description",
     required: true,
     label: "商品描述",
     align: "left",

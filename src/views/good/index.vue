@@ -89,6 +89,8 @@ import pageMix from "../../utils/page.js";
 import { onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Server from "../../utils/server.js";
+import { id_to_time } from "@/utils/tool.js";
+
 const router = useRouter();
 const show = (data) => {
   console.log(data);
@@ -142,7 +144,7 @@ const columns = [
     field: "title",
   },
   {
-    name: "desc",
+    name: "description",
     required: true,
     label: "商品描述",
     align: "left",
@@ -168,6 +170,13 @@ const columns = [
     label: "价格",
     align: "left",
     field: "price",
+  },
+  {
+    name: "time",
+    required: true,
+    label: "上架时间",
+    align: "left",
+    field: (row) => id_to_time(row.id),
   },
   {
     name: "operate",

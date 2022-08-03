@@ -76,7 +76,7 @@ import Challenge from "../../apis/challenge.js";
 import pageMix from "../../utils/page.js";
 import { onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-
+import { id_to_time } from "@/utils/tool.js";
 const emit = defineEmits(["handleChooseChallenge"]);
 const router = useRouter();
 console.log(router.options.routes);
@@ -161,6 +161,13 @@ const columns = [
     label: "状态",
     align: "left",
     field: "status",
+  },
+  {
+    name: "time",
+    required: true,
+    label: "时间",
+    align: "left",
+    field: (row) => id_to_time(row.id),
   },
   {
     name: "operate",
