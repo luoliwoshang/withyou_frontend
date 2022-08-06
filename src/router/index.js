@@ -36,7 +36,8 @@ const routes = [
       {
         path: "",
         name: global.router.name.user,
-        component: () => import("../views/user"),
+        component: () =>
+          import(/* webpackChunkName: "user" */ "../views/user"),
       },
     ],
   },
@@ -49,7 +50,7 @@ const routes = [
     children: [
       {
         path: "",
-        component: () => import("../views/challenge"),
+        component: () => import(/* webpackChunkName: "challenge" */"../views/challenge"),
       },
     ],
   },
@@ -62,7 +63,7 @@ const routes = [
     children: [
       {
         path: "",
-        component: () => import("../views/clockin"),
+        component: () => import(/* webpackChunkName: "clockin" */"../views/clockin"),
       },
     ],
   },
@@ -75,7 +76,7 @@ const routes = [
     children: [
       {
         path: "",
-        component: () => import("../views/good"),
+        component: () => import(/* webpackChunkName: "good" */"../views/good"),
       },
     ],
   },
@@ -88,7 +89,7 @@ const routes = [
     children: [
       {
         path: "",
-        component: () => import("../views/purchased"),
+        component: () => import(/* webpackChunkName: "purchased" */"../views/purchased"),
       },
     ],
   },
